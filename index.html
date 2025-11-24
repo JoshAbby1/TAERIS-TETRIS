@@ -63,13 +63,10 @@ const game = document.getElementById('game');
 const scoreEl = document.getElementById('score');
 let score = 0;
 
-// Calculate available height for the game grid
-const topHeight = document.getElementById('scoreboard').offsetHeight
-  + document.getElementById('instructions').offsetHeight
-  + document.getElementById('credit').offsetHeight
-  + 70; // controls height approx
-
-const availableHeight = window.innerHeight - topHeight;
+// --- Calculate cell size purely from viewport ---
+const controlsHeight = 70; // approx for buttons
+const topTextHeight = 80; // approx for score/instructions/credit
+const availableHeight = window.innerHeight - (controlsHeight + topTextHeight);
 const cellSize = Math.floor(availableHeight / rows);
 const gridWidth = cellSize * cols;
 
@@ -78,7 +75,7 @@ game.style.height = `${cellSize*rows}px`;
 game.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 game.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
 
-// Grid creation
+// --- Create grid ---
 let grid = [];
 for(let r=0;r<rows;r++){
   let row=[];
@@ -93,7 +90,7 @@ for(let r=0;r<rows;r++){
   grid.push(row);
 }
 
-// Pieces
+// --- Pieces ---
 const colors = ['cyan','blue','orange','yellow','green','purple','red'];
 const pieces = [
   [[1,1,1,1]], // I
@@ -110,7 +107,7 @@ let posX=0,posY=0;
 let fallSpeed=500;
 let dropInterval;
 
-// Spawn piece
+// --- Spawn piece ---
 function newPiece(){
   const p = pieces[Math.floor(Math.random()*pieces.length)];
   const color = colors[Math.floor(Math.random()*colors.length)];
@@ -119,7 +116,7 @@ function newPiece(){
   posY=0;
 }
 
-// Draw
+// --- Draw ---
 function draw(){
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
@@ -134,7 +131,7 @@ function draw(){
   });
 }
 
-// Collision
+// --- Collision ---
 function collides(dx=0,dy=0,newShape=null){
   const shape = newShape || currentPiece.shape;
   for(let y=0;y<shape.length;y++){
@@ -150,7 +147,7 @@ function collides(dx=0,dy=0,newShape=null){
   return false;
 }
 
-// Freeze
+// --- Freeze ---
 function freeze(){
   currentPiece.shape.forEach((row,y)=>{
     row.forEach((val,x)=>{
@@ -159,7 +156,7 @@ function freeze(){
   });
 }
 
-// Clear lines
+// --- Clear lines ---
 function clearLines(){
   for(let y=rows-1;y>=0;y--){
     if(grid[y].every(cell=>cell.dataset.color)){
@@ -178,12 +175,12 @@ function clearLines(){
   }
 }
 
-// Rotate
+// --- Rotate ---
 function rotate(shape){
   return shape[0].map((_,i)=>shape.map(row=>row[i])).reverse();
 }
 
-// Controls
+// --- Controls ---
 function moveLeft(){ if(!collides(-1,0)) posX--; draw();}
 function moveRight(){ if(!collides(1,0)) posX++; draw();}
 function moveDown(){ 
@@ -192,4 +189,50 @@ function moveDown(){
     score++; 
     scoreEl.textContent = score;
   } 
-  else { freeze();
+  else { freeze(); clearLines(); newPiece(); if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload();} } 
+  draw();
+}
+function rotatePiece(){ const rotated=rotate(currentPiece.shape); if(!collides(0,0,rotated)) currentPiece.shape=rotated; draw(); }
+
+// --- Keyboard ---
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowLeft') moveLeft();
+  if(e.key==='ArrowRight') moveRight();
+  if(e.key==='ArrowDown') moveDown();
+  if(e.key==='ArrowUp') rotatePiece();
+});
+
+// --- Touch buttons ---
+document.getElementById('left').addEventListener('touchstart', moveLeft);
+document.getElementById('right').addEventListener('touchstart', moveRight);
+document.getElementById('down').addEventListener('touchstart', moveDown);
+document.getElementById('rotate').addEventListener('touchstart', rotatePiece);
+
+// --- Swipe controls ---
+let startX=0,startY=0;
+document.addEventListener('touchstart', e=>{
+  startX=e.touches[0].clientX;
+  startY=e.touches[0].clientY;
+});
+document.addEventListener('touchend', e=>{
+  const dx=e.changedTouches[0].clientX - startX;
+  const dy=e.changedTouches[0].clientY - startY;
+  if(Math.abs(dx) > Math.abs(dy)){
+    if(dx>20) moveRight();
+    else if(dx<-20) moveLeft();
+  } else {
+    if(dy>20) moveDown();
+    else if(dy<-20) rotatePiece();
+  }
+});
+
+// --- Game loop ---
+function fall(){ moveDown(); }
+
+newPiece();
+draw();
+dropInterval = setInterval(fall,fallSpeed);
+
+</script>
+</body>
+</html>
