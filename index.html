@@ -10,7 +10,7 @@ html, body {
   height:100%; width:100%;
   overflow:hidden; background:#111;
   font-family:sans-serif;
-  touch-action: manipulation; /* disables zoom on touch */
+  touch-action: manipulation;
 }
 #container {
   display:flex;
@@ -27,12 +27,27 @@ html, body {
   background:#222;
 }
 .cell { background:#111; width:100%; height:100%; }
+.controls {
+  display:flex; justify-content:center; gap:10px; margin-top:10px;
+}
+.btn {
+  width:70px; height:70px;
+  background:rgba(255,255,255,0.2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px; border-radius:10px; user-select:none;
+}
 </style>
 </head>
 <body>
 <div id="container">
   <div id="scoreboard">Score: <span id="score">0</span></div>
   <div id="game"></div>
+  <div class="controls">
+    <div id="left" class="btn">◀</div>
+    <div id="rotate" class="btn">⟳</div>
+    <div id="right" class="btn">▶</div>
+    <div id="down" class="btn">▼</div>
+  </div>
 </div>
 
 <script>
@@ -40,14 +55,14 @@ const rows = 20;
 const cols = 10;
 const game = document.getElementById('game');
 const scoreEl = document.getElementById('score');
-let score=0;
+let score = 0;
 
-// Responsive 9:16 cell sizing
-const cellSize = Math.floor(window.innerHeight*0.9/rows);
+// Responsive 9:16 cell size
+const cellSize = Math.floor(window.innerHeight*0.8/rows);
 game.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 game.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
 
-// Create grid
+// Grid creation
 let grid = [];
 for(let r=0;r<rows;r++){
   let row=[];
@@ -60,7 +75,7 @@ for(let r=0;r<rows;r++){
   grid.push(row);
 }
 
-// Pieces and colors
+// Pieces
 const colors = ['cyan','blue','orange','yellow','green','purple','red'];
 const pieces = [
   [[1,1,1,1]], // I
@@ -72,13 +87,13 @@ const pieces = [
   [[1,1,0],[0,1,1]]  // Z
 ];
 
-// Current piece
-let currentPiece=null;
+// Piece state
+let currentPiece = null;
 let posX=0,posY=0;
 let fallSpeed=500;
 let dropInterval;
 
-// Spawn piece
+// Spawn new piece
 function newPiece(){
   const p = pieces[Math.floor(Math.random()*pieces.length)];
   const color = colors[Math.floor(Math.random()*colors.length)];
@@ -87,7 +102,7 @@ function newPiece(){
   posY=0;
 }
 
-// Draw
+// Draw function
 function draw(){
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
@@ -102,7 +117,7 @@ function draw(){
   });
 }
 
-// Collision
+// Collision detection
 function collides(dx=0,dy=0,newShape=null){
   const shape = newShape || currentPiece.shape;
   for(let y=0;y<shape.length;y++){
@@ -110,7 +125,7 @@ function collides(dx=0,dy=0,newShape=null){
       if(shape[y][x]){
         let nx=posX+x+dx;
         let ny=posY+y+dy;
-        if(nx<0 || nx>=cols || ny>=rows) return true;
+        if(nx<0||nx>=cols||ny>=rows) return true;
         if(grid[ny][nx].dataset.color) return true;
       }
     }
@@ -118,7 +133,7 @@ function collides(dx=0,dy=0,newShape=null){
   return false;
 }
 
-// Freeze
+// Freeze piece
 function freeze(){
   currentPiece.shape.forEach((row,y)=>{
     row.forEach((val,x)=>{
@@ -139,10 +154,10 @@ function clearLines(){
         }
       }
       y++;
-      // increase speed as score rises
+      // Increase speed as score rises
       fallSpeed = Math.max(100,500-Math.floor(score/50)*50);
       clearInterval(dropInterval);
-      dropInterval = setInterval(fall, fallSpeed);
+      dropInterval = setInterval(fall,fallSpeed);
     }
   }
 }
@@ -155,7 +170,15 @@ function rotate(shape){
 // Controls
 function moveLeft(){ if(!collides(-1,0)) posX--; draw();}
 function moveRight(){ if(!collides(1,0)) posX++; draw();}
-function moveDown(){ if(!collides(0,1)) posY++; else {freeze(); clearLines(); newPiece(); if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload();}} draw();}
+function moveDown(){ 
+  if(!collides(0,1)){ 
+    posY++; 
+    score++; // add score for each drop step
+    scoreEl.textContent = score;
+  } 
+  else { freeze(); clearLines(); newPiece(); if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload();} } 
+  draw();
+}
 function rotatePiece(){ const rotated=rotate(currentPiece.shape); if(!collides(0,0,rotated)) currentPiece.shape=rotated; draw(); }
 
 // Keyboard
@@ -166,13 +189,18 @@ document.addEventListener('keydown', e=>{
   if(e.key==='ArrowUp') rotatePiece();
 });
 
-// Swipe / touch controls
+// Touch buttons
+document.getElementById('left').addEventListener('touchstart', moveLeft);
+document.getElementById('right').addEventListener('touchstart', moveRight);
+document.getElementById('down').addEventListener('touchstart', moveDown);
+document.getElementById('rotate').addEventListener('touchstart', rotatePiece);
+
+// Swipe controls
 let startX=0,startY=0;
 document.addEventListener('touchstart', e=>{
   startX=e.touches[0].clientX;
   startY=e.touches[0].clientY;
 });
-
 document.addEventListener('touchend', e=>{
   const dx=e.changedTouches[0].clientX - startX;
   const dy=e.changedTouches[0].clientY - startY;
@@ -187,9 +215,7 @@ document.addEventListener('touchend', e=>{
 
 // Game loop
 function fall(){
-  if(!collides(0,1)) posY++;
-  else { freeze(); clearLines(); newPiece(); if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload();} }
-  draw();
+  moveDown();
 }
 
 newPiece();
