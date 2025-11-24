@@ -19,11 +19,12 @@ html, body {
   justify-content:flex-start;
   height:100%;
   width:100%;
-  padding-top:20px;
+  padding:5px;
+  box-sizing:border-box;
 }
-#scoreboard { color:white; font-size:24px; margin-bottom:5px; text-align:center;}
-#instructions { color:#aaa; font-size:16px; margin-bottom:5px; text-align:center;}
-#credit { color:#777; font-size:14px; margin-bottom:10px; text-align:center;}
+#scoreboard { color:white; font-size:24px; margin-bottom:2px; text-align:center;}
+#instructions { color:#aaa; font-size:14px; margin-bottom:2px; text-align:center;}
+#credit { color:#777; font-size:12px; margin-bottom:5px; text-align:center;}
 #game {
   display:grid;
   gap:1px;
@@ -31,13 +32,13 @@ html, body {
 }
 .cell { background:#111; }
 .controls {
-  display:flex; justify-content:center; gap:10px; margin-top:10px;
+  display:flex; justify-content:center; gap:5px; margin-top:5px;
 }
 .btn {
-  width:70px; height:70px;
+  width:50px; height:50px;
   background:rgba(255,255,255,0.2);
   display:flex; align-items:center; justify-content:center;
-  font-size:32px; border-radius:10px; user-select:none;
+  font-size:24px; border-radius:8px; user-select:none;
 }
 </style>
 </head>
@@ -62,11 +63,17 @@ const game = document.getElementById('game');
 const scoreEl = document.getElementById('score');
 let score = 0;
 
-// Calculate cell size for proper 9:16 layout
-const gameWidth = Math.min(window.innerWidth*0.9, 400);
-const cellSize = Math.floor(gameWidth / cols);
+// Calculate available height for the game grid
+const topHeight = document.getElementById('scoreboard').offsetHeight
+  + document.getElementById('instructions').offsetHeight
+  + document.getElementById('credit').offsetHeight
+  + 70; // controls height approx
 
-game.style.width = `${cellSize*cols}px`;
+const availableHeight = window.innerHeight - topHeight;
+const cellSize = Math.floor(availableHeight / rows);
+const gridWidth = cellSize * cols;
+
+game.style.width = `${gridWidth}px`;
 game.style.height = `${cellSize*rows}px`;
 game.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 game.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
@@ -112,7 +119,7 @@ function newPiece(){
   posY=0;
 }
 
-// Draw function
+// Draw
 function draw(){
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
@@ -127,7 +134,7 @@ function draw(){
   });
 }
 
-// Collision detection
+// Collision
 function collides(dx=0,dy=0,newShape=null){
   const shape = newShape || currentPiece.shape;
   for(let y=0;y<shape.length;y++){
@@ -143,7 +150,7 @@ function collides(dx=0,dy=0,newShape=null){
   return false;
 }
 
-// Freeze piece
+// Freeze
 function freeze(){
   currentPiece.shape.forEach((row,y)=>{
     row.forEach((val,x)=>{
@@ -185,50 +192,4 @@ function moveDown(){
     score++; 
     scoreEl.textContent = score;
   } 
-  else { freeze(); clearLines(); newPiece(); if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload();} } 
-  draw();
-}
-function rotatePiece(){ const rotated=rotate(currentPiece.shape); if(!collides(0,0,rotated)) currentPiece.shape=rotated; draw(); }
-
-// Keyboard
-document.addEventListener('keydown', e=>{
-  if(e.key==='ArrowLeft') moveLeft();
-  if(e.key==='ArrowRight') moveRight();
-  if(e.key==='ArrowDown') moveDown();
-  if(e.key==='ArrowUp') rotatePiece();
-});
-
-// Touch buttons
-document.getElementById('left').addEventListener('touchstart', moveLeft);
-document.getElementById('right').addEventListener('touchstart', moveRight);
-document.getElementById('down').addEventListener('touchstart', moveDown);
-document.getElementById('rotate').addEventListener('touchstart', rotatePiece);
-
-// Swipe controls
-let startX=0,startY=0;
-document.addEventListener('touchstart', e=>{
-  startX=e.touches[0].clientX;
-  startY=e.touches[0].clientY;
-});
-document.addEventListener('touchend', e=>{
-  const dx=e.changedTouches[0].clientX - startX;
-  const dy=e.changedTouches[0].clientY - startY;
-  if(Math.abs(dx) > Math.abs(dy)){
-    if(dx>20) moveRight();
-    else if(dx<-20) moveLeft();
-  } else {
-    if(dy>20) moveDown();
-    else if(dy<-20) rotatePiece();
-  }
-});
-
-// Game loop
-function fall(){ moveDown(); }
-
-newPiece();
-draw();
-dropInterval = setInterval(fall,fallSpeed);
-
-</script>
-</body>
-</html>
+  else { freeze();
