@@ -2,28 +2,37 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TAE TETRIS</title>
 <style>
-body { margin:0; display:flex; justify-content:center; align-items:center; background:#111; color:white; font-family:sans-serif; overflow:hidden;}
-#container { display:flex; flex-direction:column; align-items:center;}
-#game { display:grid; gap:1px; background:#222;}
-.cell { background:#111; width:100%; height:100%;}
-#scoreboard { margin:10px; font-size:24px;}
-.controls { display:flex; gap:10px; margin-top:10px;}
-.btn { width:60px; height:60px; background:rgba(255,255,255,0.2); display:flex; justify-content:center; align-items:center; font-size:32px; border-radius:10px; user-select:none;}
+html, body {
+  margin:0; padding:0;
+  height:100%; width:100%;
+  overflow:hidden; background:#111;
+  font-family:sans-serif;
+  touch-action: manipulation; /* disables zoom on touch */
+}
+#container {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  width:100%;
+}
+#scoreboard { color:white; font-size:24px; margin-bottom:10px; }
+#game {
+  display:grid;
+  gap:1px;
+  background:#222;
+}
+.cell { background:#111; width:100%; height:100%; }
 </style>
 </head>
 <body>
 <div id="container">
   <div id="scoreboard">Score: <span id="score">0</span></div>
   <div id="game"></div>
-  <div class="controls">
-    <div id="left" class="btn">◀</div>
-    <div id="rotate" class="btn">⟳</div>
-    <div id="right" class="btn">▶</div>
-    <div id="down" class="btn">▼</div>
-  </div>
 </div>
 
 <script>
@@ -33,8 +42,8 @@ const game = document.getElementById('game');
 const scoreEl = document.getElementById('score');
 let score=0;
 
-// Responsive cell size for 9:16
-const cellSize = Math.floor(window.innerHeight*0.9/rows); 
+// Responsive 9:16 cell sizing
+const cellSize = Math.floor(window.innerHeight*0.9/rows);
 game.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 game.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
 
@@ -66,10 +75,10 @@ const pieces = [
 // Current piece
 let currentPiece=null;
 let posX=0,posY=0;
-let fallSpeed=500; // initial ms
+let fallSpeed=500;
 let dropInterval;
 
-// Spawn a piece
+// Spawn piece
 function newPiece(){
   const p = pieces[Math.floor(Math.random()*pieces.length)];
   const color = colors[Math.floor(Math.random()*colors.length)];
@@ -82,8 +91,7 @@ function newPiece(){
 function draw(){
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
-      if(grid[r][c].dataset.color) grid[r][c].style.background=grid[r][c].dataset.color;
-      else grid[r][c].style.background='#111';
+      grid[r][c].style.background=grid[r][c].dataset.color||'#111';
     }
   }
   if(!currentPiece) return;
@@ -96,13 +104,13 @@ function draw(){
 
 // Collision
 function collides(dx=0,dy=0,newShape=null){
-  const shape=newShape||currentPiece.shape;
+  const shape = newShape || currentPiece.shape;
   for(let y=0;y<shape.length;y++){
     for(let x=0;x<shape[y].length;x++){
       if(shape[y][x]){
         let nx=posX+x+dx;
         let ny=posY+y+dy;
-        if(nx<0||nx>=cols||ny>=rows) return true;
+        if(nx<0 || nx>=cols || ny>=rows) return true;
         if(grid[ny][nx].dataset.color) return true;
       }
     }
@@ -123,16 +131,16 @@ function freeze(){
 function clearLines(){
   for(let y=rows-1;y>=0;y--){
     if(grid[y].every(cell=>cell.dataset.color)){
-      score+=10;
-      scoreEl.textContent=score;
-      for(let ty=y;ty>0;ty--){
+      score += 10;
+      scoreEl.textContent = score;
+      for(let ty=y; ty>0; ty--){
         for(let x=0;x<cols;x++){
-          grid[ty][x].dataset.color=grid[ty-1][x].dataset.color||'';
+          grid[ty][x].dataset.color = grid[ty-1][x].dataset.color||'';
         }
       }
       y++;
       // increase speed as score rises
-      fallSpeed = Math.max(100,500- Math.floor(score/50)*50);
+      fallSpeed = Math.max(100,500-Math.floor(score/50)*50);
       clearInterval(dropInterval);
       dropInterval = setInterval(fall, fallSpeed);
     }
@@ -150,6 +158,7 @@ function moveRight(){ if(!collides(1,0)) posX++; draw();}
 function moveDown(){ if(!collides(0,1)) posY++; else {freeze(); clearLines(); newPiece(); if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload();}} draw();}
 function rotatePiece(){ const rotated=rotate(currentPiece.shape); if(!collides(0,0,rotated)) currentPiece.shape=rotated; draw(); }
 
+// Keyboard
 document.addEventListener('keydown', e=>{
   if(e.key==='ArrowLeft') moveLeft();
   if(e.key==='ArrowRight') moveRight();
@@ -157,10 +166,24 @@ document.addEventListener('keydown', e=>{
   if(e.key==='ArrowUp') rotatePiece();
 });
 
-document.getElementById('left').addEventListener('touchstart', moveLeft);
-document.getElementById('right').addEventListener('touchstart', moveRight);
-document.getElementById('down').addEventListener('touchstart', moveDown);
-document.getElementById('rotate').addEventListener('touchstart', rotatePiece);
+// Swipe / touch controls
+let startX=0,startY=0;
+document.addEventListener('touchstart', e=>{
+  startX=e.touches[0].clientX;
+  startY=e.touches[0].clientY;
+});
+
+document.addEventListener('touchend', e=>{
+  const dx=e.changedTouches[0].clientX - startX;
+  const dy=e.changedTouches[0].clientY - startY;
+  if(Math.abs(dx) > Math.abs(dy)){
+    if(dx>20) moveRight();
+    else if(dx<-20) moveLeft();
+  } else {
+    if(dy>20) moveDown();
+    else if(dy<-20) rotatePiece();
+  }
+});
 
 // Game loop
 function fall(){
