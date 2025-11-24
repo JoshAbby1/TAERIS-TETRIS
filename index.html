@@ -20,7 +20,9 @@ html, body {
   height:100%;
   width:100%;
 }
-#scoreboard { color:white; font-size:24px; margin-bottom:10px; }
+#scoreboard { color:white; font-size:24px; margin-bottom:5px; text-align:center;}
+#instructions { color:#aaa; font-size:16px; margin-bottom:5px; text-align:center;}
+#credit { color:#777; font-size:14px; margin-bottom:10px; text-align:center;}
 #game {
   display:grid;
   gap:1px;
@@ -41,6 +43,8 @@ html, body {
 <body>
 <div id="container">
   <div id="scoreboard">Score: <span id="score">0</span></div>
+  <div id="instructions">Swipe or use buttons to move & rotate. Fill lines to score!</div>
+  <div id="credit">Made by @nortydigitalcrew</div>
   <div id="game"></div>
   <div class="controls">
     <div id="left" class="btn">◀</div>
@@ -112,116 +116,4 @@ function draw(){
   if(!currentPiece) return;
   currentPiece.shape.forEach((row,y)=>{
     row.forEach((val,x)=>{
-      if(val && grid[posY+y] && grid[posY+y][posX+x]) grid[posY+y][posX+x].style.background=currentPiece.color;
-    });
-  });
-}
-
-// Collision detection
-function collides(dx=0,dy=0,newShape=null){
-  const shape = newShape || currentPiece.shape;
-  for(let y=0;y<shape.length;y++){
-    for(let x=0;x<shape[y].length;x++){
-      if(shape[y][x]){
-        let nx=posX+x+dx;
-        let ny=posY+y+dy;
-        if(nx<0||nx>=cols||ny>=rows) return true;
-        if(grid[ny][nx].dataset.color) return true;
-      }
-    }
-  }
-  return false;
-}
-
-// Freeze piece
-function freeze(){
-  currentPiece.shape.forEach((row,y)=>{
-    row.forEach((val,x)=>{
-      if(val) grid[posY+y][posX+x].dataset.color=currentPiece.color;
-    });
-  });
-}
-
-// Clear lines
-function clearLines(){
-  for(let y=rows-1;y>=0;y--){
-    if(grid[y].every(cell=>cell.dataset.color)){
-      score += 10;
-      scoreEl.textContent = score;
-      for(let ty=y; ty>0; ty--){
-        for(let x=0;x<cols;x++){
-          grid[ty][x].dataset.color = grid[ty-1][x].dataset.color||'';
-        }
-      }
-      y++;
-      // Increase speed as score rises
-      fallSpeed = Math.max(100,500-Math.floor(score/50)*50);
-      clearInterval(dropInterval);
-      dropInterval = setInterval(fall,fallSpeed);
-    }
-  }
-}
-
-// Rotate
-function rotate(shape){
-  return shape[0].map((_,i)=>shape.map(row=>row[i])).reverse();
-}
-
-// Controls
-function moveLeft(){ if(!collides(-1,0)) posX--; draw();}
-function moveRight(){ if(!collides(1,0)) posX++; draw();}
-function moveDown(){ 
-  if(!collides(0,1)){ 
-    posY++; 
-    score++; // add score for each drop step
-    scoreEl.textContent = score;
-  } 
-  else { freeze(); clearLines(); newPiece(); if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload();} } 
-  draw();
-}
-function rotatePiece(){ const rotated=rotate(currentPiece.shape); if(!collides(0,0,rotated)) currentPiece.shape=rotated; draw(); }
-
-// Keyboard
-document.addEventListener('keydown', e=>{
-  if(e.key==='ArrowLeft') moveLeft();
-  if(e.key==='ArrowRight') moveRight();
-  if(e.key==='ArrowDown') moveDown();
-  if(e.key==='ArrowUp') rotatePiece();
-});
-
-// Touch buttons
-document.getElementById('left').addEventListener('touchstart', moveLeft);
-document.getElementById('right').addEventListener('touchstart', moveRight);
-document.getElementById('down').addEventListener('touchstart', moveDown);
-document.getElementById('rotate').addEventListener('touchstart', rotatePiece);
-
-// Swipe controls
-let startX=0,startY=0;
-document.addEventListener('touchstart', e=>{
-  startX=e.touches[0].clientX;
-  startY=e.touches[0].clientY;
-});
-document.addEventListener('touchend', e=>{
-  const dx=e.changedTouches[0].clientX - startX;
-  const dy=e.changedTouches[0].clientY - startY;
-  if(Math.abs(dx) > Math.abs(dy)){
-    if(dx>20) moveRight();
-    else if(dx<-20) moveLeft();
-  } else {
-    if(dy>20) moveDown();
-    else if(dy<-20) rotatePiece();
-  }
-});
-
-// Game loop
-function fall(){
-  moveDown();
-}
-
-newPiece();
-draw();
-dropInterval = setInterval(fall,fallSpeed);
-
-</script>
-</body>
-</html>
+      if(val && grid[posY+y] && grid[posY+y][pos
