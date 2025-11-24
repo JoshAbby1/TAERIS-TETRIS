@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TAE TETRIS</title>
+<style>
+body { margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#111; color:white; font-family:sans-serif;}
+#game { display:grid; grid-template-rows: repeat(20, 30px); grid-template-columns: repeat(10, 30px); gap:1px; background:#222;}
+.cell { width:30px; height:30px; background:#111;}
+#scoreboard { position:absolute; top:20px; right:20px; font-size:24px;}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="scoreboard">Score: <span id="score">0</span></div>
+
+<script>
+const rows = 20;
+const cols = 10;
+const game = document.getElementById('game');
+let score = 0;
+
+const colors = ['cyan','blue','orange','yellow','green','purple','red'];
+
+// Create grid
+let grid = [];
+for(let r=0;r<rows;r++){
+  let row = [];
+  for(let c=0;c<cols;c++){
+    const cell = document.createElement('div');
+    cell.className='cell';
+    game.appendChild(cell);
+    row.push(cell);
+  }
+  grid.push(row);
+}
+
+// Tetris pieces
+const pieces = [
+  [[1,1,1,1]], // I
+  [[1,0,0],[1,1,1]], // J
+  [[0,0,1],[1,1,1]], // L
+  [[1,1],[1,1]], // O
+  [[0,1,1],[1,1,0]], // S
+  [[0,1,0],[1,1,1]], // T
+  [[1,1,0],[0,1,1]]  // Z
+];
+
+// Piece state
+let currentPiece = null;
+let posX=0, posY=0;
+
+// Spawn a piece
+function newPiece(){
+  const p = pieces[Math.floor(Math.random()*pieces.length)];
+  const color = colors[Math.floor(Math.random()*colors.length)];
+  currentPiece = {shape:p,color:color};
+  posX = Math.floor(cols/2)-Math.floor(p[0].length/2);
+  posY = 0;
+}
+
+// Draw piece
+function draw(){
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(grid[r][c].dataset.color) grid[r][c].style.background = grid[r][c].dataset.color;
+      else grid[r][c].style.background = '#111';
+    }
+  }
+  if(!currentPiece) return;
+  currentPiece.shape.forEach((row, y)=>{
+    row.forEach((val, x)=>{
+      if(val && grid[posY+y] && grid[posY+y][posX+x]) grid[posY+y][posX+x].style.background=currentPiece.color;
+    });
+  });
+}
+
+// Collision
+function collides(dx=0, dy=0, newShape=null){
+  const shape = newShape||currentPiece.shape;
+  for(let y=0;y<shape.length;y++){
+    for(let x=0;x<shape[y].length;x++){
+      if(shape[y][x]){
+        let nx = posX+x+dx;
+        let ny = posY+y+dy;
+        if(nx<0 || nx>=cols || ny>=rows) return true;
+        if(grid[ny][nx].dataset.color) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Merge piece into grid
+function freeze(){
+  currentPiece.shape.forEach((row,y)=>{
+    row.forEach((val,x)=>{
+      if(val && grid[posY+y][posX+x]) grid[posY+y][posX+x].dataset.color = currentPiece.color;
+    });
+  });
+}
+
+// Clear lines
+function clearLines(){
+  for(let y=rows-1;y>=0;y--){
+    if(grid[y].every(cell=>cell.dataset.color)){
+      score += 10;
+      scoreEl.textContent = score;
+      for(let ty=y; ty>0; ty--){
+        for(let x=0;x<cols;x++){
+          grid[ty][x].dataset.color = grid[ty-1][x].dataset.color||'';
+        }
+      }
+      y++; // check same row again
+    }
+  }
+}
+
+function rotate(shape){
+  return shape[0].map((_,i)=>shape.map(row=>row[i])).reverse();
+}
+
+// Controls
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft' && !collides(-1,0)) posX--;
+  if(e.key==='ArrowRight' && !collides(1,0)) posX++;
+  if(e.key==='ArrowDown' && !collides(0,1)) posY++;
+  if(e.key==='ArrowUp'){
+    const rotated = rotate(currentPiece.shape);
+    if(!collides(0,0,rotated)) currentPiece.shape = rotated;
+  }
+  draw();
+});
+
+const scoreEl = document.getElementById('score');
+
+// Game loop
+newPiece();
+draw();
+function loop(){
+  if(!collides(0,1)){
+    posY++;
+  } else {
+    freeze();
+    clearLines();
+    newPiece();
+    if(collides(0,0)){ alert('Game Over! Score: '+score); location.reload(); }
+  }
+  draw();
+  setTimeout(loop,500);
+}
+
+loop();
+</script>
+</body>
+</html>
